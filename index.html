@@ -3,92 +3,141 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Passport Photo Printer</title>
+    <title>Modern Passport Photo Generator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        /* CSS Variables for Size and Margin */
+        /* --- 1. CSS Variables --- */
         :root {
-            /* Default Photo Size */
+            /* Sizes (updated by JS) */
             --photo-w: 35mm;
             --photo-h: 45mm;
-            /* Default Page Margin */
             --page-m: 10mm;
-            /* Default Photo Gap */
             --photo-gap: 5mm; 
-            /* Custom Page Size (initially empty) */
             --page-w: ''; 
             --page-h: ''; 
+            /* Aesthetics */
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --background-light: #f8f9fa;
+            --card-background: #ffffff;
+            --border-radius: 8px;
+            /* Image Filters (updated by JS) */
+            --photo-brightness: 100%;
         }
 
+        /* --- 2. Base & Typography --- */
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Poppins', sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f4f4f9;
+            background-color: var(--background-light);
+            color: #343a40;
+            line-height: 1.6;
         }
 
         header {
-            background-color: #333;
+            background-color: var(--primary-color);
             color: white;
-            padding: 15px;
+            padding: 20px 0;
             text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        h1, h2 {
+            font-weight: 600;
+        }
+        
+        h2 {
+            color: var(--primary-color);
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 5px;
+            margin-bottom: 15px;
         }
 
         main {
             display: flex;
-            max-width: 1200px;
-            margin: 20px auto;
-            padding: 20px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            max-width: 1300px;
+            margin: 0 auto 40px auto;
+            background: var(--card-background);
+            border-radius: var(--border-radius);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
         }
 
-        /* --- Control Panel Styling --- */
+        /* --- 3. Control Panel Styling --- */
         .controls-panel {
             flex: 1;
-            padding-right: 20px;
-            border-right: 1px solid #ddd;
+            padding: 30px;
+            border-right: 1px solid #e9ecef;
         }
 
         fieldset {
-            border: 1px solid #ccc;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 4px;
+            border: 1px solid #dee2e6;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-radius: var(--border-radius);
+            transition: all 0.3s ease;
+        }
+        
+        fieldset:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
 
         legend {
-            font-weight: bold;
+            font-weight: 600;
             padding: 0 10px;
-            color: #0056b3;
+            color: var(--primary-color);
+            font-size: 1.1em;
         }
 
         .control-group {
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
 
         .control-group label {
             display: block;
-            font-weight: 600;
+            font-weight: 400;
             margin-bottom: 5px;
+            color: #495057;
+            font-size: 0.95em;
         }
 
         input[type="number"], select, input[type="file"] {
-            padding: 8px;
-            margin-right: 5px;
-            border: 1px solid #ccc;
+            padding: 10px;
+            border: 1px solid #ced4da;
             border-radius: 4px;
+            width: calc(100% - 22px); /* Full width minus padding/border */
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+        
+        input[type="number"]:focus, select:focus {
+            border-color: var(--primary-color);
+            outline: none;
+        }
+        
+        .size-inputs input {
+            width: 80px;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        .size-inputs span {
+            color: var(--secondary-color);
+            font-size: 0.9em;
         }
 
         button {
-            padding: 10px 20px;
+            padding: 12px 25px;
             background-color: #28a745;
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: var(--border-radius);
             cursor: pointer;
-            font-size: 16px;
-            margin-top: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-top: 15px;
+            transition: background-color 0.3s;
         }
 
         button:hover {
@@ -96,36 +145,40 @@
         }
 
         .note {
-            font-size: 0.9em;
-            color: #666;
+            font-size: 0.85em;
+            color: #495057;
             margin-top: 15px;
             padding: 10px;
-            border-left: 3px solid #f0ad4e;
-            background-color: #fff8e1;
+            border-left: 4px solid #ffc107;
+            background-color: #fff3cd;
+            border-radius: 4px;
+        }
+        #fit-message {
+            font-weight: 600;
         }
 
-        /* --- Print Preview Styling --- */
+        /* --- 4. Print Preview Styling --- */
         .print-preview-container {
             flex: 2;
-            padding-left: 20px;
+            padding: 30px;
+            background-color: var(--background-light);
         }
 
         .print-area {
-            /* Default styling for the page */
             background-color: white;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-            border: 1px dashed #aaa;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            border: 2px dashed #adb5bd;
             margin: 20px auto;
             overflow: hidden; 
-            padding: var(--page-m); /* Apply page margin */
+            padding: var(--page-m); 
 
             display: flex;
             flex-wrap: wrap; 
-            gap: var(--photo-gap); /* Apply photo spacing */
+            gap: var(--photo-gap); 
             box-sizing: border-box;
         }
 
-        /* 3. Page Size Presets */
+        /* Page Size Presets */
         .print-area.a4 {
             width: 210mm;
             height: 297mm;
@@ -136,13 +189,13 @@
             height: 210mm;
         }
 
-        /* Custom Page Size (overrides presets if set) */
+        /* Custom Page Size */
         .print-area:not(.a4):not(.a5) {
             width: var(--page-w);
             height: var(--page-h);
         }
 
-        /* 4. Alignment Selection */
+        /* Alignment Selection */
         .print-area.center {
             justify-content: center; 
             align-items: center; 
@@ -156,25 +209,25 @@
             align-items: flex-start;
         }
 
-        /* 2. Photo Size (applied to the actual images) */
+        /* 2. Photo Size and Filter */
         .passport-photo {
             width: var(--photo-w);   
             height: var(--photo-h);  
             object-fit: cover;       
             display: block;
-            border: 1px solid #333; /* Visual border for cutting */
+            border: 1px solid #343a40; 
             box-sizing: border-box;
+            /* New: Apply brightness filter */
+            filter: brightness(var(--photo-brightness)); 
         }
 
-        /* --- Print-Specific Styles --- */
+        /* --- 5. Print-Specific Styles --- */
         @media print {
             body {
-                margin: 0;
-                padding: 0;
                 background: none;
             }
 
-            /* Hide the controls and header when printing */
+            /* Hide everything but the content on print */
             header, .controls-panel, .note, button, h2 {
                 display: none;
             }
@@ -186,11 +239,13 @@
                 background: none;
                 box-shadow: none;
                 max-width: none;
+                width: 100%;
             }
 
             .print-preview-container {
                 padding: 0;
                 margin: 0;
+                background: none;
             }
 
             /* The print area becomes the entire page */
@@ -217,21 +272,26 @@
             <h2>⚙️ Print Settings</h2>
 
             <fieldset>
-                <legend>Photo Configuration</legend>
+                <legend>Photo & Copies</legend>
                 <div class="control-group">
                     <label for="photo-upload">**1. Select Photo:**</label>
                     <input type="file" id="photo-upload" accept="image/*" onchange="loadPhoto(event)">
                 </div>
-                <div class="control-group">
-                    <label for="photo-width">**2. Photo Size (mm):**</label>
+                <div class="control-group size-inputs">
+                    <label>**2. Photo Size (mm):**</label>
                     <input type="number" id="photo-width" min="10" value="35" onchange="updateLayout()" required>
-                    <span>mm (Width)</span>
+                    <span>W</span>
                     <input type="number" id="photo-height" min="10" value="45" onchange="updateLayout()" required>
-                    <span>mm (Height)</span>
+                    <span>H</span>
                 </div>
                 <div class="control-group">
                     <label for="photo-copies">**Number of Copies:**</label>
                     <input type="number" id="photo-copies" min="1" value="8" onchange="updateLayout()" required>
+                </div>
+                <div class="control-group">
+                    <label for="photo-brightness-percent">**1. Increase Brightness (%):**</label>
+                    <input type="number" id="photo-brightness-percent" min="-50" max="100" value="0" onchange="updateBrightness()" required>
+                    <small>Default is 0%. Range is typically -50% (darker) to 100% (brighter).</small>
                 </div>
             </fieldset>
 
@@ -244,7 +304,7 @@
                         <option value="A5">A5 (148 x 210 mm)</option>
                         <option value="custom">Custom</option>
                     </select>
-                    <div id="custom-page-size" style="display:none; margin-top: 5px;">
+                    <div id="custom-page-size" style="display:none; margin-top: 5px;" class="size-inputs">
                         W: <input type="number" id="page-width" value="210" min="50" onchange="updateLayout()"> mm
                         H: <input type="number" id="page-height" value="297" min="50" onchange="updateLayout()"> mm
                     </div>
@@ -281,14 +341,14 @@
 
             <div class="print-section">
                 <button onclick="printPhotos()">🖨️ **6. Print Layout**</button>
-                <p class="note">**Note:** Photo layout logic calculates maximum fit *or* uses the number of copies, whichever is lower.</p>
             </div>
         </div>
 
         <div class="print-preview-container">
             <h2>📄 Print Preview</h2>
             <div id="print-area" class="print-area a4 center">
-                </div>
+                <p style="margin: auto; color: var(--secondary-color);">Load a photo to generate the layout.</p>
+            </div>
             <p class="note" id="fit-message">
                 **Layout Status:** Load a photo and adjust settings to see the preview.
             </p>
@@ -298,6 +358,23 @@
     <script>
         // --- JAVASCRIPT FUNCTIONS ---
         
+        // Converts percent change (e.g., 10) to a filter value (e.g., 1.1)
+        function getBrightnessValue(percentChange) {
+            // Base brightness is 1 (100%). We add the change/100 to it.
+            return (100 + percentChange) / 100;
+        }
+
+        // 1. New: Update Brightness Filter
+        function updateBrightness() {
+            const brightnessPercent = parseFloat(document.getElementById('photo-brightness-percent').value);
+            const brightnessValue = getBrightnessValue(brightnessPercent);
+            
+            // Set CSS variable to apply the filter to all photo elements
+            document.documentElement.style.setProperty('--photo-brightness', `brightness(${brightnessValue})`);
+
+            document.getElementById('fit-message').textContent = `Brightness set to +${brightnessPercent}%. Layout unchanged.`;
+        }
+
         // 1. Photo Selection: Loads the photo and triggers layout update.
         function loadPhoto(event) {
             const file = event.target.files[0];
@@ -305,8 +382,8 @@
 
             const reader = new FileReader();
             reader.onload = (e) => {
-                const imgSource = e.target.result;
-                document.getElementById('print-area').dataset.imgSrc = imgSource;
+                const imgSrc = e.target.result;
+                document.getElementById('print-area').dataset.imgSrc = imgSrc;
                 updateLayout(); 
             };
             reader.readAsDataURL(file);
@@ -320,7 +397,7 @@
             printArea.className = 'print-area'; // Reset classes
 
             if (select.value === 'custom') {
-                customDiv.style.display = 'block';
+                customDiv.style.display = 'flex';
             } else {
                 customDiv.style.display = 'none';
                 printArea.classList.add(select.value.toLowerCase());
@@ -337,93 +414,70 @@
             const imgSrc = printArea.dataset.imgSrc;
             const fitMessage = document.getElementById('fit-message');
 
-            // 1. Update all CSS variables from inputs
+            // 1. Get values
             const photoW = parseFloat(document.getElementById('photo-width').value);
             const photoH = parseFloat(document.getElementById('photo-height').value);
             const pageMargin = parseFloat(document.getElementById('page-margin').value);
             const photoGap = parseFloat(document.getElementById('photo-spacing').value);
             const requestedCopies = parseInt(document.getElementById('photo-copies').value);
             const alignment = document.getElementById('alignment').value;
+            const sizeSelect = document.getElementById('page-size').value;
 
+            // 2. Update CSS variables
             document.documentElement.style.setProperty('--photo-w', `${photoW}mm`);
             document.documentElement.style.setProperty('--photo-h', `${photoH}mm`);
             document.documentElement.style.setProperty('--page-m', `${pageMargin}mm`);
             document.documentElement.style.setProperty('--photo-gap', `${photoGap}mm`);
             
-            // Handle custom page size CSS variables if active
-            const sizeSelect = document.getElementById('page-size').value;
             if (sizeSelect === 'custom') {
                 document.documentElement.style.setProperty('--page-w', `${document.getElementById('page-width').value}mm`);
                 document.documentElement.style.setProperty('--page-h', `${document.getElementById('page-height').value}mm`);
             }
             
-            // 2. Set Alignment Class
+            // 3. Set Alignment Class
             printArea.classList.remove('left', 'center', 'right');
             printArea.classList.add(alignment);
             
             if (!imgSrc) {
-                printArea.innerHTML = '';
+                printArea.innerHTML = '<p style="margin: auto; color: var(--secondary-color);">Load a photo to generate the layout.</p>';
                 fitMessage.textContent = 'Layout Status: Please load a photo to calculate the layout.';
                 return; 
             }
 
-            // 3. Determine Page Dimensions (in mm)
+            // 4. Determine Page Dimensions (in mm)
             let pageWidth, pageHeight;
             if (sizeSelect === 'A4') {
-                pageWidth = 210;
-                pageHeight = 297;
+                pageWidth = 210; pageHeight = 297;
             } else if (sizeSelect === 'A5') {
-                pageWidth = 148;
-                pageHeight = 210;
+                pageWidth = 148; pageHeight = 210;
             } else { // Custom
                 pageWidth = parseFloat(document.getElementById('page-width').value);
                 pageHeight = parseFloat(document.getElementById('page-height').value);
             }
             
-            // 4. Calculate Printable Area
+            // 5. Calculate Printable Area
             const printableW = pageWidth - (pageMargin * 2);
             const printableH = pageHeight - (pageMargin * 2);
 
-            // 5. Calculate Maximum Fit
-            // The effective width needed for N photos is N*photoW + (N-1)*photoGap
-            
+            // 6. Calculate Maximum Fit (using photo width + gap)
             let photosPerRow = 0;
             if (photoW > 0) {
-                let tempW = printableW;
-                let count = 0;
-                while (tempW >= photoW) {
-                    tempW -= photoW;
-                    count++;
-                    if (count > 0 && tempW >= photoGap) {
-                        tempW -= photoGap;
-                    } else if (count > 0) {
-                        // Not enough space left for another gap, stop here
-                        break; 
-                    }
-                }
-                photosPerRow = count;
+                // Formula: N*W + (N-1)*G <= P. Solve for N (where P is printable width)
+                // N <= (P + G) / (W + G)
+                photosPerRow = Math.floor((printableW + photoGap) / (photoW + photoGap));
+                photosPerRow = Math.max(0, photosPerRow); // Ensure non-negative
             }
 
             let numRows = 0;
             if (photoH > 0) {
-                 let tempH = printableH;
-                let count = 0;
-                while (tempH >= photoH) {
-                    tempH -= photoH;
-                    count++;
-                    if (count > 0 && tempH >= photoGap) {
-                        tempH -= photoGap;
-                    } else if (count > 0) {
-                        break;
-                    }
-                }
-                numRows = count;
+                numRows = Math.floor((printableH + photoGap) / (photoH + photoGap));
+                numRows = Math.max(0, numRows);
             }
 
             const maxFit = photosPerRow * numRows;
             const photosToRender = Math.min(requestedCopies, maxFit);
 
-            // 6. Render the Photos
+            // 7. Render the Photos
             printArea.innerHTML = ''; 
             for (let i = 0; i < photosToRender; i++) {
                 const img = document.createElement('img');
@@ -433,13 +487,13 @@
                 printArea.appendChild(img);
             }
             
-            // 7. Update Status Message
+            // 8. Update Status Message
             if (photosToRender < requestedCopies) {
-                fitMessage.textContent = `**Layout Status:** Only ${photosToRender} of ${requestedCopies} copies fit on the page (${photosPerRow} wide x ${numRows} high). Please use more pages or select a larger page size.`;
-                fitMessage.style.color = 'red';
+                fitMessage.textContent = `⚠️ **WARNING:** Only ${photosToRender} of ${requestedCopies} copies fit on the page (${photosPerRow} wide x ${numRows} high).`;
+                fitMessage.style.color = '#dc3545'; // Red for warning
             } else {
-                fitMessage.textContent = `**Layout Status:** ${photosToRender} copies fit successfully on the page (${photosPerRow} wide x ${numRows} high).`;
-                fitMessage.style.color = '#218838';
+                fitMessage.textContent = `✅ **Success:** ${photosToRender} copies fit successfully on the page (${photosPerRow} wide x ${numRows} high).`;
+                fitMessage.style.color = '#28a745'; // Green for success
             }
         }
 
@@ -450,8 +504,8 @@
 
         // Initialize on load
         window.onload = () => {
-            setPagePreset(); 
-            updateLayout(); 
+            setPagePreset(); // Handles initial page size and calls updateLayout()
+            updateBrightness(); // Apply initial brightness (0%)
         };
     </script>
 </body>
