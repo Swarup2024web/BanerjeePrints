@@ -13,7 +13,7 @@
             --photo-h: 45mm;
             --page-m: 10mm;
             --col-gap: 5mm; /* Horizontal Gap */
-            --row-gap: 5mm; /* Vertical Gap (New) */
+            --row-gap: 5mm; /* Vertical Gap */
             --page-w: ''; 
             --page-h: ''; 
             /* Aesthetics */
@@ -175,9 +175,12 @@
 
             display: flex;
             flex-wrap: wrap; 
-            column-gap: var(--col-gap); /* Horizontal gap */
-            row-gap: var(--row-gap); /* Vertical gap (New CSS property) */
+            column-gap: var(--col-gap); 
+            row-gap: var(--row-gap); 
             box-sizing: border-box;
+            
+            /* FIX: Ensure content starts from the top vertically */
+            align-content: flex-start;
         }
 
         /* Page Size Presets */
@@ -200,15 +203,16 @@
         /* Alignment Selection */
         .print-area.center {
             justify-content: center; 
-            align-items: center; 
+            /* FIX: Align photo rows to the top (prevents huge gaps) */
+            align-items: flex-start; 
         }
         .print-area.left {
             justify-content: flex-start;
-            align-items: flex-start;
+            align-items: flex-start; 
         }
         .print-area.right {
             justify-content: flex-end;
-            align-items: flex-start;
+            align-items: flex-start; 
         }
 
         /* Photo Size and Filter */
@@ -364,15 +368,11 @@
     <script>
         // --- JAVASCRIPT FUNCTIONS ---
         
-        // FIX 1: Brightness % Calculation
+        // Brightness % Calculation
         function updateBrightness() {
             const brightnessPercent = parseFloat(document.getElementById('photo-brightness-percent').value);
-            
-            // Calculate the filter value (e.g., 0% change = 100%, +10% change = 110%)
             const filterValue = 100 + brightnessPercent; 
-            
             document.documentElement.style.setProperty('--photo-brightness', `${filterValue}%`);
-
             document.getElementById('fit-message').textContent = `Brightness set to ${filterValue}%. Layout unchanged.`;
         }
 
@@ -408,7 +408,7 @@
             updateLayout();
         }
         
-        // CORE LAYOUT LOGIC (Handles photo size, page size, margin, and both gaps)
+        // CORE LAYOUT LOGIC 
         function updateLayout() {
             const printArea = document.getElementById('print-area');
             const imgSrc = printArea.dataset.imgSrc;
@@ -418,13 +418,13 @@
             const photoW = parseFloat(document.getElementById('photo-width').value);
             const photoH = parseFloat(document.getElementById('photo-height').value);
             const pageMargin = parseFloat(document.getElementById('page-margin').value);
-            const colGap = parseFloat(document.getElementById('photo-spacing').value); // Horizontal Gap
-            const rowGap = parseFloat(document.getElementById('row-spacing').value); // Vertical Gap (New)
+            const colGap = parseFloat(document.getElementById('photo-spacing').value); 
+            const rowGap = parseFloat(document.getElementById('row-spacing').value); 
             const requestedCopies = parseInt(document.getElementById('photo-copies').value);
             const alignment = document.getElementById('alignment').value;
             const sizeSelect = document.getElementById('page-size').value;
 
-            // 2. Update CSS variables (Photo Size and Gaps are dynamic)
+            // 2. Update CSS variables
             document.documentElement.style.setProperty('--photo-w', `${photoW}mm`);
             document.documentElement.style.setProperty('--photo-h', `${photoH}mm`);
             document.documentElement.style.setProperty('--col-gap', `${colGap}mm`);
@@ -462,11 +462,9 @@
             const printableH = pageHeight - (pageMargin * 2);
 
             // 6. Calculate Maximum Fit (Horizontal)
-            // N <= (P + G) / (W + G) --> Use COL GAP
             const photosPerRow = Math.max(0, Math.floor((printableW + colGap) / (photoW + colGap)));
             
             // 7. Calculate Maximum Fit (Vertical)
-            // N <= (P + G) / (H + G) --> Use ROW GAP (NEW)
             const numRows = Math.max(0, Math.floor((printableH + rowGap) / (photoH + rowGap)));
 
             const maxFit = photosPerRow * numRows;
