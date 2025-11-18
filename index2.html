@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passport Photo Printer Layout</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Define a scale factor for screen display (4px per mm) */
+        /* This is for visual representation only; actual print dimensions rely on browser print settings. */
+        :root {
+            --scale-factor: 4;
+            --page-width-px: 840px; /* Default A4 width: 210mm * 4 = 840px */
+            --page-height-px: 1189px; /* Default A4 height: 297mm * 4 = 1188px (using 1189 to avoid rounding issues) */
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        /* Custom styles for the printable area to simulate the page */
+        #page-preview-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem;
+            min-height: 80vh;
+        }
+
+        .printable-page {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            background-color: white;
+            flex-shrink: 0;
+            margin-bottom: 24px;
+            overflow: hidden; /* Prevent photos from spilling over */
+            position: relative;
+        }
+
+        .photo-layout {
+            display: flex;
+            flex-wrap: wrap;
+            position: absolute;
+            top: 0;
+            left: 0;
+            /* Padding will be set dynamically via JS to match margins */
+        }
+
+        .photo-wrapper {
+            box-sizing: content-box; /* Padding/margin is added outside the photo dimensions */
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .passport-photo {
+            object-fit: cover;
+            width: 100%;
+            height: 100%;
+            border: 1px solid #e5e7eb; /* Subtle border for visibility */
+            transition: filter 0.3s;
+        }
+
+        /* Responsive adjustments for mobile */
+        @media (max-width: 1024px) {
+            #main-layout {
+                flex-direction: column;
+            }
+            #settings-panel {
+                width: 100%;
+                max-width: none;
+                padding: 1rem;
+            }
+            #preview-area {
+                width: 100%;
+            }
+            .printable-page {
+                width: 100% !important; /* Allow the page to stretch on mobile */
+                height: auto !important;
+                max-width: 95vw;
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+    <div id="main-layout" class="flex flex-col lg:flex-row">
+        
+        <!-- Settings Panel -->
+        <div id="settings-panel" class="lg:w-1/3 p-6 bg-white shadow-xl rounded-lg m-4 max-w-lg lg:max-w-none">
+            <h1 class="text-2xl font-bold mb-6 text-indigo-700">Photo Print Layout Configurator</h1>
+
+            <!-- 1. Photo Upload -->
+            <div class="mb-6 border-b pb-4">
+                <label for="photo-upload" class="block text-sm font-medium text-gray-700 mb-2">1. Upload Photos (Multiple Allowed)</label>
+                <input type="file" id="photo-upload" multiple accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
+                <p class="text-xs text-red-500 mt-2" id="upload-status"></p>
+                <div id="uploaded-count" class="text-xs text-gray-500 mt-2">0 photos uploaded.</div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <!-- 2. Photo Size (Height & Width) -->
+                <div class="col-span-2">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-3">2. Photo Dimensions (mm)</h2>
+                </div>
+                <div>
+                    <label for="photo-width" class="block text-xs font-medium text-gray-700">Width (mm)</label>
+                    <input type="number" id="photo-width" value="35" min="10" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 text-sm">
+                </div>
+                <div>
+                    <label for="photo-height" class="block text-xs font-medium text-gray-700">Height (mm)</label>
+                    <input type="number" id="photo-height" value="45" min="10" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 text-sm">
+                </div>
+            </div>
+
+            <!-- 3. Page Size -->
+            <div class="mb-6 border-t pt-4">
+                <h2 class="text-lg font-semibold text-gray-800 mb-3">3. Page Setup</h2>
+                <label for="page-size-preset" class="block text-xs font-medium text-gray-700">Page Preset</label>
+                <select id="page-size-preset" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 text-sm">
+                    <option value="A4">A4 (210 x 297 mm)</option>
+                    <option value="A5">A5 (148 x 210 mm)</option>
+                    <option value="Custom">Custom (Use inputs below)</option>
+                </select>
+
+                <div id="custom-page-size" class="grid grid-cols-2 gap-4 mt-3 hidden">
+                    <div>
+                        <label for="page-width" class="block text-xs font-medium text-gray-700">Page Width (mm)</label>
+                        <input type="number" id="page-width" value="210" min="50" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 text-sm">
+                    </div>
+                    <div>
+                        <label for="page-height" class="block text-xs font-medium text-gray-700">Page Height (mm)</label>
+                        <input type="number" id="page-height" value="297" min="50" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 text-sm">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Page Margin & Gap -->
+            <div class="grid grid-cols-2 gap-4 mb-6 border-t pt-4">
+                <div>
+                    <label for="page-margin" class="block text-xs font-medium text-gray-700">4. Page Margin (mm)</label>
+                    <input type="number" id="page-margin" value="10" min="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 text-sm">
+                </div>
+                <div>
+                    <label for="photo-gap" class="block text-xs font-medium text-gray-700">5. Photo Gap (mm)</label>
+                    <input type="number" id="photo-gap" value="3" min="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 text-sm">
+                </div>
+            </div>
+
+            <!-- 5. Brightness Control -->
+            <div class="mb-6 border-t pt-4">
+                <h2 class="text-lg font-semibold text-gray-800 mb-3">6. Photo Adjustments</h2>
+                <label for="brightness-control" class="block text-sm font-medium text-gray-700">Brightness: <span id="brightness-value">100</span>%</label>
+                <input type="range" id="brightness-control" min="50" max="200" value="100" step="5" class="mt-1 w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg">
+            </div>
+
+            <!-- Print Button -->
+            <button onclick="window.print()" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition duration-150">
+                Print Layout
+            </button>
+        </div>
+
+        <!-- Preview Area -->
+        <div id="preview-area" class="lg:w-2/3 p-4">
+            <h2 class="text-xl font-bold mb-4 text-gray-700 lg:text-left text-center">Print Preview (<span class="text-indigo-500">Scale: 4px/mm</span>)</h2>
+            <div id="page-preview-container">
+                <!-- Generated pages will go here -->
+                <div id="initial-message" class="p-8 bg-white rounded-lg shadow-inner text-gray-500">
+                    <p>Upload images and configure the settings to see the print layout preview here.</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Global state
+        let uploadedImages = []; // Stores { id: number, dataURL: string }
+        let imageCounter = 0;
+        const SCALE_FACTOR = 4; // 4 pixels per 1 mm for screen preview
+
+        // DOM elements
+        const pagePreviewContainer = document.getElementById('page-preview-container');
+        const photoUploadInput = document.getElementById('photo-upload');
+        const brightnessControl = document.getElementById('brightness-control');
+        const brightnessValueSpan = document.getElementById('brightness-value');
+        const customPageSizeDiv = document.getElementById('custom-page-size');
+        const pageSizePreset = document.getElementById('page-size-preset');
+        const uploadedCountSpan = document.getElementById('uploaded-count');
+        const initialMessage = document.getElementById('initial-message');
+        const uploadStatus = document.getElementById('upload-status');
+
+        // Page Size Presets (Width x Height in mm)
+        const PAGE_SIZES = {
+            A4: { width: 210, height: 297 },
+            A5: { width: 148, height: 210 }
+        };
+
+        // Utility: mm to Px conversion for screen visualization
+        const mmToPx = (mm) => mm * SCALE_FACTOR;
+
+        // --- Event Handlers ---
+
+        function handleImageUpload(event) {
+            const files = event.target.files;
+            uploadStatus.textContent = '';
+            if (files.length === 0) return;
+
+            Array.from(files).forEach(file => {
+                if (!file.type.startsWith('image/')) {
+                    uploadStatus.textContent = 'Warning: Skipping non-image file.';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    // Only add the image if we have less than 50 (to prevent memory issues)
+                    if (uploadedImages.length < 50) {
+                        uploadedImages.push({
+                            id: imageCounter++,
+                            dataURL: e.target.result
+                        });
+                        renderPhotos();
+                    } else {
+                        uploadStatus.textContent = 'Max 50 images supported for preview memory safety.';
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+            uploadedCountSpan.textContent = `${uploadedImages.length} photos uploaded.`;
+            photoUploadInput.value = ''; // Clear input for re-uploading the same file
+        }
+
+        function handlePresetChange() {
+            const preset = pageSizePreset.value;
+            const pageWInput = document.getElementById('page-width');
+            const pageHInput = document.getElementById('page-height');
+
+            if (preset === 'Custom') {
+                customPageSizeDiv.classList.remove('hidden');
+            } else {
+                customPageSizeDiv.classList.add('hidden');
+                pageWInput.value = PAGE_SIZES[preset].width;
+                pageHInput.value = PAGE_SIZES[preset].height;
+            }
+            renderPhotos();
+        }
+
+        function handleBrightnessChange(event) {
+            const value = event.target.value;
+            brightnessValueSpan.textContent = value;
+            renderPhotos();
+        }
+
+        // --- Core Rendering Logic ---
+
+        function renderPhotos() {
+            // 1. Get all settings (in mm)
+            const photoW_mm = parseFloat(document.getElementById('photo-width').value) || 35;
+            const photoH_mm = parseFloat(document.getElementById('photo-height').value) || 45;
+            const pageW_mm = parseFloat(document.getElementById('page-width').value) || 210;
+            const pageH_mm = parseFloat(document.getElementById('page-height').value) || 297;
+            const margin_mm = parseFloat(document.getElementById('page-margin').value) || 10;
+            const gap_mm = parseFloat(document.getElementById('photo-gap').value) || 3;
+            const brightness = parseFloat(brightnessControl.value) || 100;
+
+            if (uploadedImages.length === 0) {
+                pagePreviewContainer.innerHTML = '';
+                initialMessage.classList.remove('hidden');
+                pagePreviewContainer.appendChild(initialMessage);
+                return;
+            }
+
+            initialMessage.classList.add('hidden');
+            pagePreviewContainer.innerHTML = ''; // Clear previous pages
+
+            // 2. Calculate dimensions for layout (in mm)
+            const printableW_mm = pageW_mm - (2 * margin_mm);
+            const printableH_mm = pageH_mm - (2 * margin_mm);
+
+            // Sanity check
+            if (printableW_mm <= 0 || printableH_mm <= 0 || photoW_mm <= 0 || photoH_mm <= 0) {
+                 pagePreviewContainer.innerHTML = `<div class="p-4 text-red-600 bg-red-100 rounded-lg">Error: Check your dimensions and ensure Page Size > 2 * Margin.</div>`;
+                 return;
+            }
+
+            // 3. Calculate max photos per row/column (including the gap after each photo)
+            // Formula: floor((PrintableDimension + Gap) / (PhotoDimension + Gap))
+            const maxCols = Math.floor((printableW_mm + gap_mm) / (photoW_mm + gap_mm));
+            const maxRows = Math.floor((printableH_mm + gap_mm) / (photoH_mm + gap_mm));
+
+            if (maxCols < 1 || maxRows < 1) {
+                pagePreviewContainer.innerHTML = `<div class="p-4 text-red-600 bg-red-100 rounded-lg">Error: Photos do not fit on this page size with current margins/gaps.</div>`;
+                return;
+            }
+
+            const totalPhotosPerPage = maxCols * maxRows;
+            let currentImageIndex = 0;
+            let pageNumber = 1;
+
+            // 4. Loop through images and generate pages
+            while (currentImageIndex < uploadedImages.length) {
+                const pageElement = document.createElement('div');
+                pageElement.classList.add('printable-page');
+                
+                // Set the page size for the screen preview
+                pageElement.style.width = `${mmToPx(pageW_mm)}px`;
+                pageElement.style.height = `${mmToPx(pageH_mm)}px`;
+
+                // Add a page title for context
+                const pageTitle = document.createElement('div');
+                pageTitle.classList.add('absolute', 'top-1', 'right-2', 'text-xs', 'text-gray-400', 'z-10', 'print:hidden');
+                pageTitle.textContent = `Page ${pageNumber}`;
+                pageElement.appendChild(pageTitle);
+
+
+                const layoutContainer = document.createElement('div');
+                layoutContainer.classList.add('photo-layout', 'p-1', 'print:p-0');
+                
+                // Set the margin/padding for the layout container
+                layoutContainer.style.top = `${mmToPx(margin_mm)}px`;
+                layoutContainer.style.left = `${mmToPx(margin_mm)}px`;
+                layoutContainer.style.width = `${mmToPx(printableW_mm) + mmToPx(gap_mm)}px`; // Add one gap for overflow handling
+                layoutContainer.style.height = `${mmToPx(printableH_mm) + mmToPx(gap_mm)}px`;
+                
+                // Use a counter to track photos on the current page
+                let photosOnPage = 0;
+
+                while (photosOnPage < totalPhotosPerPage && currentImageIndex < uploadedImages.length) {
+                    const photoData = uploadedImages[currentImageIndex];
+
+                    // 5. Generate Photo Element 1
+                    const photoWrapper = document.createElement('div');
+                    photoWrapper.classList.add('photo-wrapper');
+                    
+                    // Set photo dimensions (in px)
+
