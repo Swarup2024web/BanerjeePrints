@@ -22,7 +22,7 @@
             --card-background: #ffffff;
             --border-radius: 8px;
             /* Image Filters (updated by JS) */
-            --photo-brightness: 100%;
+            --photo-brightness: 100%; /* Default 100% means no change */
         }
 
         /* --- 2. Base & Typography --- */
@@ -209,7 +209,7 @@
             align-items: flex-start;
         }
 
-        /* 2. Photo Size and Filter */
+        /* Photo Size and Filter */
         .passport-photo {
             width: var(--photo-w);   
             height: var(--photo-h);  
@@ -217,7 +217,7 @@
             display: block;
             border: 1px solid #343a40; 
             box-sizing: border-box;
-            /* New: Apply brightness filter */
+            /* Apply brightness filter */
             filter: brightness(var(--photo-brightness)); 
         }
 
@@ -291,7 +291,7 @@
                 <div class="control-group">
                     <label for="photo-brightness-percent">**1. Increase Brightness (%):**</label>
                     <input type="number" id="photo-brightness-percent" min="-50" max="100" value="0" onchange="updateBrightness()" required>
-                    <small>Default is 0%. Range is typically -50% (darker) to 100% (brighter).</small>
+                    <small>Default is 0%. Range is -50% (darker) to 100% (brighter).</small>
                 </div>
             </fieldset>
 
@@ -358,24 +358,22 @@
     <script>
         // --- JAVASCRIPT FUNCTIONS ---
         
-        // Converts percent change (e.g., 10) to a filter value (e.g., 1.1)
-        function getBrightnessValue(percentChange) {
-            // Base brightness is 1 (100%). We add the change/100 to it.
-            return (100 + percentChange) / 100;
-        }
-
-        // 1. New: Update Brightness Filter
+        // FIX 1: Brightness % Calculation
         function updateBrightness() {
             const brightnessPercent = parseFloat(document.getElementById('photo-brightness-percent').value);
-            const brightnessValue = getBrightnessValue(brightnessPercent);
+            
+            // The CSS brightness filter accepts a multiplier or a percentage. 
+            // 100% is default (no change). We directly pass the calculated percentage.
+            // E.g., if input is 10, the filter is 110%. If input is -10, it's 90%.
+            const filterValue = 100 + brightnessPercent; 
             
             // Set CSS variable to apply the filter to all photo elements
-            document.documentElement.style.setProperty('--photo-brightness', `brightness(${brightnessValue})`);
+            document.documentElement.style.setProperty('--photo-brightness', `${filterValue}%`);
 
-            document.getElementById('fit-message').textContent = `Brightness set to +${brightnessPercent}%. Layout unchanged.`;
+            document.getElementById('fit-message').textContent = `Brightness set to ${filterValue}%. Layout unchanged.`;
         }
 
-        // 1. Photo Selection: Loads the photo and triggers layout update.
+        // Photo Selection: Loads the photo and triggers layout update.
         function loadPhoto(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -389,7 +387,7 @@
             reader.readAsDataURL(file);
         }
 
-        // 3. Page Size Preset Handler
+        // Page Size Preset Handler
         function setPagePreset() {
             const select = document.getElementById('page-size');
             const customDiv = document.getElementById('custom-page-size');
@@ -408,7 +406,7 @@
             updateLayout();
         }
         
-        // CORE LAYOUT LOGIC
+        // CORE LAYOUT LOGIC (Handles photo size, page size, margin, gap, and alignment)
         function updateLayout() {
             const printArea = document.getElementById('print-area');
             const imgSrc = printArea.dataset.imgSrc;
@@ -423,9 +421,11 @@
             const alignment = document.getElementById('alignment').value;
             const sizeSelect = document.getElementById('page-size').value;
 
-            // 2. Update CSS variables
+            // 2. Update CSS variables for photo size (FIX 2)
             document.documentElement.style.setProperty('--photo-w', `${photoW}mm`);
             document.documentElement.style.setProperty('--photo-h', `${photoH}mm`);
+            
+            // Update other CSS variables
             document.documentElement.style.setProperty('--page-m', `${pageMargin}mm`);
             document.documentElement.style.setProperty('--photo-gap', `${photoGap}mm`);
             
@@ -459,20 +459,10 @@
             const printableW = pageWidth - (pageMargin * 2);
             const printableH = pageHeight - (pageMargin * 2);
 
-            // 6. Calculate Maximum Fit (using photo width + gap)
-            let photosPerRow = 0;
-            if (photoW > 0) {
-                // Formula: N*W + (N-1)*G <= P. Solve for N (where P is printable width)
-                // N <= (P + G) / (W + G)
-                photosPerRow = Math.floor((printableW + photoGap) / (photoW + photoGap));
-                photosPerRow = Math.max(0, photosPerRow); // Ensure non-negative
-            }
-
-            let numRows = 0;
-            if (photoH > 0) {
-                numRows = Math.floor((printableH + photoGap) / (photoH + photoGap));
-                numRows = Math.max(0, numRows);
-            }
+            // 6. Calculate Maximum Fit 
+            // N <= (P + G) / (W + G)
+            const photosPerRow = Math.max(0, Math.floor((printableW + photoGap) / (photoW + photoGap)));
+            const numRows = Math.max(0, Math.floor((printableH + photoGap) / (photoH + photoGap)));
 
             const maxFit = photosPerRow * numRows;
             const photosToRender = Math.min(requestedCopies, maxFit);
@@ -490,10 +480,10 @@
             // 8. Update Status Message
             if (photosToRender < requestedCopies) {
                 fitMessage.textContent = `⚠️ **WARNING:** Only ${photosToRender} of ${requestedCopies} copies fit on the page (${photosPerRow} wide x ${numRows} high).`;
-                fitMessage.style.color = '#dc3545'; // Red for warning
+                fitMessage.style.color = '#dc3545';
             } else {
                 fitMessage.textContent = `✅ **Success:** ${photosToRender} copies fit successfully on the page (${photosPerRow} wide x ${numRows} high).`;
-                fitMessage.style.color = '#28a745'; // Green for success
+                fitMessage.style.color = '#28a745';
             }
         }
 
@@ -504,8 +494,9 @@
 
         // Initialize on load
         window.onload = () => {
-            setPagePreset(); // Handles initial page size and calls updateLayout()
-            updateBrightness(); // Apply initial brightness (0%)
+            setPagePreset(); 
+            updateBrightness(); 
+            updateLayout(); // Ensure photo size and layout are applied immediately
         };
     </script>
 </body>
