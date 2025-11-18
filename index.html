@@ -12,7 +12,8 @@
             --photo-w: 35mm;
             --photo-h: 45mm;
             --page-m: 10mm;
-            --photo-gap: 5mm; 
+            --col-gap: 5mm; /* Horizontal Gap */
+            --row-gap: 5mm; /* Vertical Gap (New) */
             --page-w: ''; 
             --page-h: ''; 
             /* Aesthetics */
@@ -22,7 +23,7 @@
             --card-background: #ffffff;
             --border-radius: 8px;
             /* Image Filters (updated by JS) */
-            --photo-brightness: 100%; /* Default 100% means no change */
+            --photo-brightness: 100%; 
         }
 
         /* --- 2. Base & Typography --- */
@@ -107,7 +108,7 @@
             padding: 10px;
             border: 1px solid #ced4da;
             border-radius: 4px;
-            width: calc(100% - 22px); /* Full width minus padding/border */
+            width: calc(100% - 22px); 
             box-sizing: border-box;
             transition: border-color 0.2s;
         }
@@ -174,7 +175,8 @@
 
             display: flex;
             flex-wrap: wrap; 
-            gap: var(--photo-gap); 
+            column-gap: var(--col-gap); /* Horizontal gap */
+            row-gap: var(--row-gap); /* Vertical gap (New CSS property) */
             box-sizing: border-box;
         }
 
@@ -289,14 +291,14 @@
                     <input type="number" id="photo-copies" min="1" value="8" onchange="updateLayout()" required>
                 </div>
                 <div class="control-group">
-                    <label for="photo-brightness-percent">**1. Increase Brightness (%):**</label>
+                    <label for="photo-brightness-percent">**Brightness Adjustment (%):**</label>
                     <input type="number" id="photo-brightness-percent" min="-50" max="100" value="0" onchange="updateBrightness()" required>
-                    <small>Default is 0%. Range is -50% (darker) to 100% (brighter).</small>
+                    <small>0% is normal. +10% means 110% brightness.</small>
                 </div>
             </fieldset>
 
             <fieldset>
-                <legend>Page Layout</legend>
+                <legend>Page Layout & Spacing</legend>
                 <div class="control-group">
                     <label for="page-size">**3. Page Size:**</label>
                     <select id="page-size" onchange="setPagePreset()">
@@ -314,8 +316,12 @@
                     <input type="number" id="page-margin" min="0" value="10" onchange="updateLayout()">
                 </div>
                 <div class="control-group">
-                    <label for="photo-spacing">**Space Between Photos (mm):**</label>
+                    <label for="photo-spacing">**Gap Between Columns (mm):**</label>
                     <input type="number" id="photo-spacing" min="0" value="5" onchange="updateLayout()">
+                </div>
+                 <div class="control-group">
+                    <label for="row-spacing">**Gap Between Rows (mm):**</label>
+                    <input type="number" id="row-spacing" min="0" value="5" onchange="updateLayout()">
                 </div>
             </fieldset>
 
@@ -362,18 +368,15 @@
         function updateBrightness() {
             const brightnessPercent = parseFloat(document.getElementById('photo-brightness-percent').value);
             
-            // The CSS brightness filter accepts a multiplier or a percentage. 
-            // 100% is default (no change). We directly pass the calculated percentage.
-            // E.g., if input is 10, the filter is 110%. If input is -10, it's 90%.
+            // Calculate the filter value (e.g., 0% change = 100%, +10% change = 110%)
             const filterValue = 100 + brightnessPercent; 
             
-            // Set CSS variable to apply the filter to all photo elements
             document.documentElement.style.setProperty('--photo-brightness', `${filterValue}%`);
 
             document.getElementById('fit-message').textContent = `Brightness set to ${filterValue}%. Layout unchanged.`;
         }
 
-        // Photo Selection: Loads the photo and triggers layout update.
+        // Photo Selection
         function loadPhoto(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -392,21 +395,20 @@
             const select = document.getElementById('page-size');
             const customDiv = document.getElementById('custom-page-size');
             const printArea = document.getElementById('print-area');
-            printArea.className = 'print-area'; // Reset classes
+            printArea.className = 'print-area'; 
 
             if (select.value === 'custom') {
                 customDiv.style.display = 'flex';
             } else {
                 customDiv.style.display = 'none';
                 printArea.classList.add(select.value.toLowerCase());
-                // Reset custom properties
                 document.documentElement.style.setProperty('--page-w', '');
                 document.documentElement.style.setProperty('--page-h', '');
             }
             updateLayout();
         }
         
-        // CORE LAYOUT LOGIC (Handles photo size, page size, margin, gap, and alignment)
+        // CORE LAYOUT LOGIC (Handles photo size, page size, margin, and both gaps)
         function updateLayout() {
             const printArea = document.getElementById('print-area');
             const imgSrc = printArea.dataset.imgSrc;
@@ -416,18 +418,18 @@
             const photoW = parseFloat(document.getElementById('photo-width').value);
             const photoH = parseFloat(document.getElementById('photo-height').value);
             const pageMargin = parseFloat(document.getElementById('page-margin').value);
-            const photoGap = parseFloat(document.getElementById('photo-spacing').value);
+            const colGap = parseFloat(document.getElementById('photo-spacing').value); // Horizontal Gap
+            const rowGap = parseFloat(document.getElementById('row-spacing').value); // Vertical Gap (New)
             const requestedCopies = parseInt(document.getElementById('photo-copies').value);
             const alignment = document.getElementById('alignment').value;
             const sizeSelect = document.getElementById('page-size').value;
 
-            // 2. Update CSS variables for photo size (FIX 2)
+            // 2. Update CSS variables (Photo Size and Gaps are dynamic)
             document.documentElement.style.setProperty('--photo-w', `${photoW}mm`);
             document.documentElement.style.setProperty('--photo-h', `${photoH}mm`);
-            
-            // Update other CSS variables
+            document.documentElement.style.setProperty('--col-gap', `${colGap}mm`);
+            document.documentElement.style.setProperty('--row-gap', `${rowGap}mm`);
             document.documentElement.style.setProperty('--page-m', `${pageMargin}mm`);
-            document.documentElement.style.setProperty('--photo-gap', `${photoGap}mm`);
             
             if (sizeSelect === 'custom') {
                 document.documentElement.style.setProperty('--page-w', `${document.getElementById('page-width').value}mm`);
@@ -459,15 +461,18 @@
             const printableW = pageWidth - (pageMargin * 2);
             const printableH = pageHeight - (pageMargin * 2);
 
-            // 6. Calculate Maximum Fit 
-            // N <= (P + G) / (W + G)
-            const photosPerRow = Math.max(0, Math.floor((printableW + photoGap) / (photoW + photoGap)));
-            const numRows = Math.max(0, Math.floor((printableH + photoGap) / (photoH + photoGap)));
+            // 6. Calculate Maximum Fit (Horizontal)
+            // N <= (P + G) / (W + G) --> Use COL GAP
+            const photosPerRow = Math.max(0, Math.floor((printableW + colGap) / (photoW + colGap)));
+            
+            // 7. Calculate Maximum Fit (Vertical)
+            // N <= (P + G) / (H + G) --> Use ROW GAP (NEW)
+            const numRows = Math.max(0, Math.floor((printableH + rowGap) / (photoH + rowGap)));
 
             const maxFit = photosPerRow * numRows;
             const photosToRender = Math.min(requestedCopies, maxFit);
 
-            // 7. Render the Photos
+            // 8. Render the Photos
             printArea.innerHTML = ''; 
             for (let i = 0; i < photosToRender; i++) {
                 const img = document.createElement('img');
@@ -477,7 +482,7 @@
                 printArea.appendChild(img);
             }
             
-            // 8. Update Status Message
+            // 9. Update Status Message
             if (photosToRender < requestedCopies) {
                 fitMessage.textContent = `⚠️ **WARNING:** Only ${photosToRender} of ${requestedCopies} copies fit on the page (${photosPerRow} wide x ${numRows} high).`;
                 fitMessage.style.color = '#dc3545';
@@ -496,7 +501,7 @@
         window.onload = () => {
             setPagePreset(); 
             updateBrightness(); 
-            updateLayout(); // Ensure photo size and layout are applied immediately
+            updateLayout(); 
         };
     </script>
 </body>
