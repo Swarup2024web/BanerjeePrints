@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passport Photo Printer</title>
+    <style>
+        /* CSS Variables for Size and Margin */
+        :root {
+            /* Default Photo Size */
+            --photo-w: 35mm;
+            --photo-h: 45mm;
+            /* Default Page Margin */
+            --page-m: 10mm;
+            /* Custom Page Size (initially empty, used when page-size is 'custom') */
+            --page-w: ''; 
+            --page-h: ''; 
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+        }
+
+        header {
+            background-color: #333;
+            color: white;
+            padding: 15px;
+            text-align: center;
+        }
+
+        main {
+            display: flex;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* --- Control Panel Styling --- */
+        .controls-panel {
+            flex: 1;
+            padding-right: 20px;
+            border-right: 1px solid #ddd;
+        }
+
+        fieldset {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        legend {
+            font-weight: bold;
+            padding: 0 10px;
+            color: #0056b3;
+        }
+
+        .control-group {
+            margin-bottom: 10px;
+        }
+
+        .control-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        input[type="number"], select, input[type="file"] {
+            padding: 8px;
+            margin-right: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+
+        .note {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 15px;
+            padding: 10px;
+            border-left: 3px solid #f0ad4e;
+            background-color: #fff8e1;
+        }
+
+        /* --- Print Preview Styling --- */
+        .print-preview-container {
+            flex: 2;
+            padding-left: 20px;
+        }
+
+        .print-area {
+            /* Default styling for the page */
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            border: 1px dashed #aaa;
+            margin: 20px auto;
+            overflow: hidden; 
+            padding: var(--page-m); /* Apply margin via CSS Variable */
+
+            display: flex;
+            flex-wrap: wrap; 
+            gap: 5px; 
+            box-sizing: border-box;
+        }
+
+        /* 3. Page Size Presets */
+        .print-area.a4 {
+            width: 210mm;
+            height: 297mm;
+        }
+
+        .print-area.a5 {
+            width: 148mm;
+            height: 210mm;
+        }
+
+        /* Custom Page Size (overrides presets if set) */
+        .print-area:not(.a4):not(.a5) {
+            width: var(--page-w);
+            height: var(--page-h);
+        }
+
+        /* 4. Alignment Selection */
+        .print-area.center {
+            justify-content: center; 
+            align-items: center; 
+        }
+        .print-area.left {
+            justify-content: flex-start;
+            align-items: flex-start;
+        }
+        .print-area.right {
+            justify-content: flex-end;
+            align-items: flex-start;
+        }
+
+        /* 2. Photo Size (applied to the actual images) */
+        .passport-photo {
+            width: var(--photo-w);   
+            height: var(--photo-h);  
+            object-fit: cover;       
+            display: block;
+            border: 1px solid #333; 
+            box-sizing: border-box;
+            /* Placeholder for drag functionality */
+            cursor: grab;
+        }
+
+        /* --- Print-Specific Styles --- */
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+                background: none;
+            }
+
+            /* Hide the controls and header when printing */
+            header, .controls-panel, .note, button, h2 {
+                display: none;
+            }
+
+            main {
+                display: block;
+                margin: 0;
+                padding: 0;
+                background: none;
+                box-shadow: none;
+                max-width: none;
+            }
+
+            .print-preview-container {
+                padding: 0;
+                margin: 0;
+            }
+
+            /* The print area becomes the entire page */
+            .print-area {
+                width: 100% !important; 
+                height: 100% !important; 
+                margin: 0;
+                border: none;
+                box-shadow: none;
+                padding: var(--page-m); 
+                page-break-after: always;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Passport Photo Print Layout Tool</h1>
+    </header>
+
+    <main>
+        <div class="controls-panel">
+            <h2>⚙️ Print Settings</h2>
+
+            <fieldset>
+                <legend>Photo Configuration</legend>
+                <div class="control-group">
+                    <label for="photo-upload">**1. Select Photo:**</label>
+                    <input type="file" id="photo-upload" accept="image/*" onchange="loadPhoto(event)">
+                </div>
+                <div class="control-group">
+                    <label for="photo-width">**2. Photo Size (mm):**</label>
+                    <input type="number" id="photo-width" min="10" value="35" onchange="updatePhotoSize()" required>
+                    <span>mm (Width)</span>
+                    <input type="number" id="photo-height" min="10" value="45" onchange="updatePhotoSize()" required>
+                    <span>mm (Height)</span>
+                    <p class="note">**Note:** Drag functionality for cropping/positioning requires external JavaScript libraries (e.g., interact.js) not included here.</p>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>Page Layout</legend>
+                <div class="control-group">
+                    <label for="page-size">**3. Page Size:**</label>
+                    <select id="page-size" onchange="setPagePreset()">
+                        <option value="A4">A4 (210 x 297 mm)</option>
+                        <option value="A5">A5 (148 x 210 mm)</option>
+                        <option value="custom">Custom</option>
+                    </select>
+                    <div id="custom-page-size" style="display:none; margin-top: 5px;">
+                        W: <input type="number" id="page-width" value="210" min="50" onchange="updatePageSize()"> mm
+                        H: <input type="number" id="page-height" value="297" min="50" onchange="updatePageSize()"> mm
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label for="page-margin">**Margin (mm):**</label>
+                    <input type="number" id="page-margin" min="0" value="10" onchange="updateMargin()">
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>Printing Preferences</legend>
+                <div class="control-group">
+                    <label for="alignment">**4. Alignment:**</label>
+                    <select id="alignment" onchange="updateAlignment()">
+                        <option value="center">Center</option>
+                        <option value="left">Left</option>
+                        <option value="right">Right</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="paper-quality">**5. Page Quality:**</label>
+                    <select id="paper-quality">
+                        <option value="glossy">Photo paper glossy</option>
+                        <option value="matte">Photo paper matte</option>
+                        <option value="plain">Plain white paper</option>
+                    </select>
+                </div>
+            </fieldset>
+
+            <div class="print-section">
+                <button onclick="printPhotos()">🖨️ **6. Print Layout**</button>
+            </div>
+        </div>
+
+        <div class="print-preview-container">
+            <h2>📄 Print Preview</h2>
+            <div id="print-area" class="print-area a4 center">
+                </div>
+            <p class="note">
+                **Current View:** The preview shows how photos will fill the page based on size and margin settings.
+            </p>
+        </div>
+    </main>
+
+    <script>
+        // --- SKELETAL JAVASCRIPT FUNCTIONS ---
+        
+        // 1. Photo Selection: Loads the photo and calculates how many fit.
+        function loadPhoto(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const imgSource = e.target.result;
+                // Store the image source globally or in a data attribute for use by updateLayout
+                document.getElementById('print-area').dataset.imgSrc = imgSource;
+                
+                updateLayout(); // Trigger layout update with the new image
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // 2. & 3. Update Photo Size, Margin, Alignment
+        function updatePhotoSize() {
+            const width = document.getElementById('photo-width').value;
+            const height = document.getElementById('photo-height').value;
+            document.documentElement.style.setProperty('--photo-w', `${width}mm`);
+            document.documentElement.style.setProperty('--photo-h', `${height}mm`);
+            updateLayout();
+        }
+
+        function setPagePreset() {
+            const select = document.getElementById('page-size');
+            const customDiv = document.getElementById('custom-page-size');
+            const printArea = document.getElementById('print-area');
+            printArea.className = 'print-area'; // Reset classes
+
+            if (select.value === 'custom') {
+                customDiv.style.display = 'block';
+                updatePageSize();
+            } else {
+                customDiv.style.display = 'none';
+                printArea.classList.add(select.value.toLowerCase());
+                document.documentElement.style.setProperty('--page-w', '');
+                document.documentElement.style.setProperty('--page-h', '');
+            }
+            updateLayout();
+        }
+
+        function updatePageSize() {
+            const width = document.getElementById('page-width').value;
+            const height = document.getElementById('page-height').value;
+            document.documentElement.style.setProperty('--page-w', `${width}mm`);
+            document.documentElement.style.setProperty('--page-h', `${height}mm`);
+            updateLayout();
+        }
+
+        function updateMargin() {
+            const margin = document.getElementById('page-margin').value;
+            document.documentElement.style.setProperty('--page-m', `${margin}mm`);
+            updateLayout();
+        }
+
+        function updateAlignment() {
+            const alignment = document.getElementById('alignment').value;
+            const printArea = document.getElementById('print-area');
+            printArea.classList.remove('left', 'center', 'right');
+            printArea.classList.add(alignment);
+            updateLayout();
+        }
+        
+        // CORE LAYOUT LOGIC (simplified for this example)
+        function updateLayout() {
+            const printArea = document.getElementById('print-area');
+            const imgSrc = printArea.dataset.imgSrc;
+            
+            if (!imgSrc) return; // Wait until an image is loaded
+
+            const photoW = parseFloat(document.getElementById('photo-width').value);
+            const photoH = parseFloat(document.getElementById('photo-height').value);
+            const pageMargin = parseFloat(document.getElementById('page-margin').value);
+            
+            // Get page dimensions from the actual preview element style (or use JS inputs)
+            // Note: Calculating mm to pixels dynamically is complex. We use hardcoded presets here.
+            
+            let pageWidth, pageHeight;
+            const sizeSelect = document.getElementById('page-size').value;
+
+            if (sizeSelect === 'custom') {
+                pageWidth = parseFloat(document.getElementById('page-width').value);
+                pageHeight = parseFloat(document.getElementById('page-height').value);
+            } else if (sizeSelect === 'A4') {
+                pageWidth = 210;
+                pageHeight = 297;
+            } else { // A5
+                pageWidth = 148;
+                pageHeight = 210;
+            }
+            
+            // Account for double margin on both sides (left/right, top/bottom)
+            const printableW = pageWidth - (pageMargin * 2);
+            const printableH = pageHeight - (pageMargin * 2);
+
+            // Calculate how many photos fit
+            const photosPerRow = Math.floor(printableW / photoW);
+            const numRows = Math.floor(printableH / photoH);
+            const totalPhotos = photosPerRow * numRows;
+
+            // Render the photos
+            printArea.innerHTML = ''; 
+            for (let i = 0; i < totalPhotos; i++) {
+                const img = document.createElement('img');
+                img.src = imgSrc;
+                img.alt = `Passport Photo ${i + 1}`;
+                img.classList.add('passport-photo');
+                printArea.appendChild(img);
+            }
+
+            console.log(`Calculated: ${totalPhotos} photos fit (${photosPerRow}x${numRows}).`);
+        }
+
+        // 6. Print Option
+        function printPhotos() {
+            window.print(); 
+        }
+
+        // Initialize on load
+        window.onload = () => {
+            setPagePreset(); 
+            updateMargin();  
+            updateAlignment(); 
+            updatePhotoSize(); 
+        };
+    </script>
+</body>
+</html>
